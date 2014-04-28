@@ -53,8 +53,7 @@ cd $homePath/stratosphere-yarn-0.5-SNAPSHOT
 
 export HADOOP_HOME=/opt/hadoop/hadoop/
 export HADOOP_CONF_DIR=/opt/hadoop/hadoop/conf/
-export JAVA_HOME=/opt/java/jdk1.7.0_51/jre/
-
+export JAVA_HOME=/opt/java/jdk1.7.0_51/
 echo 'Start Stratosphere'
 #start yarn session
 nohup ./bin/yarn-session.sh -n 1 -jm 1024 -tm 1024  >> stratosphere_yarn_session.log 2>&1 &
