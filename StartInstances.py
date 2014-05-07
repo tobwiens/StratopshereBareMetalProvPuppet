@@ -10,8 +10,6 @@ from PuppetConfigFileManager import ConfigFileManager
 from BotoConnectionManager import BotoConnectionManager
 import sys, time
 
-def getMemoryOfInstance
-
 
 def waitUntilInstanceIsRunning(instance):
         '''
