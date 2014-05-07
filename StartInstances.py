@@ -1,3 +1,4 @@
+#!/bin/python 
 '''
 Created on 15/04/2014
 
@@ -8,8 +9,163 @@ MAXIMUM_TRIES = 100
 
 from PuppetConfigFileManager import ConfigFileManager
 from BotoConnectionManager import BotoConnectionManager
-import sys, time
+import sys, time, boto
 
+def setupSecurityGroups(amazonConnection, configFile):
+    '''
+    Sets up security groups. Creates them + sets up access.
+    '''
+    #Automatically configure security groups
+    print 'create security groups'
+    createSecurityGroup(ec2RegionConnection=amazonConnection.ec2RegionConnection,
+                        securityGroupName=configFile.getMasterSecurityGroup())
+    createSecurityGroup(ec2RegionConnection=amazonConnection.ec2RegionConnection,
+                        securityGroupName=configFile.getSlavesSecurityGroup())
+    
+    #Access from Master to Slaves and backwards and slaves to slaves
+    print 'configure security group access'
+    authorizeInboundSecGroup(securityGroupName= configFile.getMasterSecurityGroup(),
+                             ec2RegionConnection=amazonConnection.ec2RegionConnection,
+                             toAuthSecGroupName = configFile.getSlavesSecurityGroup(),
+                             ipProtocol='tcp',
+                             fromPort= 0,
+                             toPort=65535)
+    authorizeInboundSecGroup(securityGroupName=configFile.getSlavesSecurityGroup(),
+                             ec2RegionConnection=amazonConnection.ec2RegionConnection,
+                             toAuthSecGroupName = configFile.getMasterSecurityGroup(),
+                             ipProtocol='tcp',
+                             fromPort= 0,
+                             toPort=65535)
+    authorizeInboundSecGroup(securityGroupName=configFile.getSlavesSecurityGroup(),
+                             ec2RegionConnection=amazonConnection,
+                             toAuthSecGroupName = configFile.getSlavesSecurityGroup(),
+                             ipProtocol='tcp',
+                             fromPort= 0,
+                             toPort=65535)
+    authorizeInboundSecGroup(securityGroupName= configFile.getMasterSecurityGroup(),
+                             ec2RegionConnection=amazonConnection.ec2RegionConnection,
+                             toAuthSecGroupName = configFile.getSlavesSecurityGroup(),
+                             ipProtocol='udp',
+                             fromPort= 0,
+                             toPort=65535)
+    authorizeInboundSecGroup(securityGroupName=configFile.getSlavesSecurityGroup(),
+                             ec2RegionConnection=amazonConnection.ec2RegionConnection,
+                             toAuthSecGroupName = configFile.getMasterSecurityGroup(),
+                             ipProtocol='udp',
+                             fromPort= 0,
+                             toPort=65535)
+    authorizeInboundSecGroup(securityGroupName=configFile.getSlavesSecurityGroup(),
+                             ec2RegionConnection=amazonConnection,
+                             toAuthSecGroupName = configFile.getSlavesSecurityGroup(),
+                             ipProtocol='udp',
+                             fromPort= 0,
+                             toPort=65535)
+    
+    #Allow SSH access
+    print 'Authorize ssh at master and slaves'
+    authorizeInboundIP(securityGroupName=configFile.getMasterSecurityGroup(),
+                       ec2RegionConnection=amazonConnection.ec2RegionConnection,
+                       ipAddress = '0.0.0.0/0',
+                       ipProtocol='tcp',
+                       fromPort=22,
+                       toPort=22)
+    authorizeInboundIP(securityGroupName=configFile.getSlavesSecurityGroup(),
+                       ec2RegionConnection=amazonConnection.ec2RegionConnection,
+                       ipAddress = '0.0.0.0/0',
+                       ipProtocol='tcp',
+                       fromPort=22,
+                       toPort=22)
+    print 'Allow access to yarn web-interface'
+    authorizeInboundIP(securityGroupName=configFile.getMasterSecurityGroup(),
+                       ec2RegionConnection=amazonConnection.ec2RegionConnection,
+                       ipAddress = '0.0.0.0/0',
+                       ipProtocol='tcp',
+                       fromPort=9026,
+                       toPort=9026)
+
+def createSecurityGroup(ec2RegionConnection=None, securityGroupName=None):
+    '''
+    Creates a security group.
+    @param ec2RegionConnection: connection to region where to create the security group
+    @type ec2RegionConnection: boto.ec2.connection
+    @param securityGroupName: Name of security group to create
+    @type securityGroupName: String
+    '''
+    
+    try:
+        ec2RegionConnection.get_all_security_groups(groupnames=[securityGroupName])[0]
+        print 'Security group: '+str(securityGroupName)+' does exist. It will not be created.'
+        return True
+    except:
+        print 'Security group: '+str(securityGroupName)+' will be created'
+     
+    try:
+        ec2RegionConnection.create_security_group(name=securityGroupName, description=securityGroupName)
+    except boto.exception.EC2ResponseError as e:
+        print e
+    
+    return True
+
+def authorizeInboundIP(securityGroupName, ec2RegionConnection, ipAddress = None, ipProtocol='tcp', fromPort= None, toPort=None):
+    '''
+    Authorizes IP access for everyone to a specific security group. When ipAddress is give SSH access will be authorized for 
+    that specific IP address
+    @param securityGroupName: Name of the security group in that ec2 region
+    @type securityGroupName: String
+    @param amazonConnection: Boto connection an amazon region
+    @type amazonConnection: Boto connection to a specific amazon region
+    @param ipAddress: IP address which is allowed to access that security group with SSH
+    @type ipAddress: String in form of '127.0.0.1/32'
+    @param ipProtocol: Protocol type which is allowed to access that security group with SSH
+    @type ipAddress: String in form of 'tcp' or 'udp'
+    @param fromPort: Port number to start allowance from
+    @type fromPort: Integer
+    @param toPort: Port number to end allowance at
+    @type toPort: Integer
+    '''
+    #Get security Group
+    try:
+        jobManagerSecGroup = ec2RegionConnection.get_all_security_groups(groupnames=[securityGroupName])[0]
+    except:
+        return False   
+    
+    if ipAddress is None :
+        ipAddress = '0.0.0.0/0'
+    
+    #allow access
+    try:
+        jobManagerSecGroup.authorize(ip_protocol=ipProtocol, from_port=fromPort, to_port=toPort, cidr_ip= ipAddress)
+    except boto.exception.EC2ResponseError as e:
+        print e
+        
+def authorizeInboundSecGroup(securityGroupName, ec2RegionConnection, toAuthSecGroupName = None, ipProtocol='tcp', fromPort= None, toPort=None):
+    '''
+    Authorizes IP access for everyone to a specific security group. When ipAddress is give SSH access will be authorized for 
+    that specific IP address
+    @param securityGroupName: Name of the security group in that ec2 region
+    @type securityGroupName: String
+    @param amazonConnection: Boto connection an amazon region
+    @type amazonConnection: Boto connection to a specific amazon region
+    @param secGroupName: Security group which granted access.
+    @type secGroupName: String: name of security group which want to grant access to.
+    '''
+    #Get security Group
+    try:
+        secGroup = ec2RegionConnection.get_all_security_groups(groupnames=[securityGroupName])[0]
+    except:
+        return False   
+    
+    if toAuthSecGroupName is None :
+        print 'security group which is granted has to be specified'
+        return False
+    
+    #allow access
+    try:
+        toAuthGroup = ec2RegionConnection.get_all_security_groups(groupnames=[toAuthSecGroupName])[0]
+        secGroup.authorize(ip_protocol=ipProtocol, from_port=fromPort, to_port=toPort, src_group=toAuthGroup)
+    except boto.exception.EC2ResponseError as e:
+        print e
+    
 
 def waitUntilInstanceIsRunning(instance):
         '''
@@ -132,23 +288,27 @@ if __name__ == '__main__':
     #    sys.exit('Update config file')
     
     #Get secret SSH key
-    keyMaterial = getFileContent(fileWithPath=configFile.getKeyPath())
+    #keyMaterial = getFileContent(fileWithPath=configFile.getKeyPath())
     
     #Get user data
     #userData = "#!/bin/bash -x \n exec > >(tee /var/log/user-data.log|logger -t user-data -s 2>/dev/console) 2>&1 \n"
     #add user name
-    userDataMaster = getFileContent(fileWithPath=configFile.getMasterUserDataFile())
-    print userDataMaster
     
-    '''print 'Customize master start script'
-    userDataMaster += 'nohup ./bin/yarn-session.sh -n '
-    userDataMaster += str(configFile.getSlavesInstanceCount() - 1)
+    setupSecurityGroups(amazonConnection=amazonConnection, configFile=configFile)
+    
+    
+    userDataMaster = getFileContent(fileWithPath=configFile.getMasterUserDataFile())
+    
+    print 'Customize master start script'
+    userDataMaster += '\n nohup ./bin/yarn-session.sh -n '
+    userDataMaster += str(int(configFile.getSlavesInstanceCount()) - 1)
     userDataMaster += ' -jm '
-    userDataMaster +=
+    userDataMaster += str(configFile.getStratosphereJobmanagerMemory())
     userDataMaster += ' -tm '
-    userDataMaster += 
-    userDataMaster '>> stratosphere_yarn_session.log 2>&1 &'
-    '''
+    userDataMaster += str(configFile.getStratosphereTaskmanagerMemory())
+    userDataMaster += ' >> stratosphere_yarn_session.log 2>&1 &'
+    
+    print userDataMaster
 
     
     print 'Start one instance of type '+configFile.getMasterInstanceType()+' to run the puppet master instance with image id: '+configFile.getMasterImageId()

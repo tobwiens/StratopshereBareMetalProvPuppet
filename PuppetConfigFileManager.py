@@ -56,7 +56,9 @@ class ConfigFileManager(object):
     MASTER_USER_DATA_FILE = 'user-data-file'  
     MASTER_SPOT_PRICE = 'spot-price'
     
-    JAVA_JAVA_HOME = 'java-home-directory'
+    #Stratosphere
+    STRATOSPHERE_TASKMANAGER_MEMORY = 'taskmanager-memory'
+    STRATOSPHERE_JOBMANAGER_MEMORY = 'jobmanager-memory'
     
     
     
@@ -151,8 +153,11 @@ class ConfigFileManager(object):
     def getSlavesUserDataFile(self):
         return self.config.get(section=self.SLAVES_SECTION_NAME, option=self.SLAVES_USER_DATA_FILE)
     
-    def getJavaHome(self):
-        return self.config.get(section=self.JAVA_SECTION_NAME, option=self.JAVA_JAVA_HOME)
+    def getStratosphereTaskmanagerMemory(self):
+        return self.config.get(section=self.STRATOSPHERE_SECTION_NAME, option=self.STRATOSPHERE_TASKMANAGER_MEMORY)
+    
+    def getStratosphereJobmanagerMemory(self):
+        return self.config.get(section=self.STRATOSPHERE_SECTION_NAME, option=self.STRATOSPHERE_JOBMANAGER_MEMORY)
     
     def isMasterSpotPriceSet(self):
         '''
