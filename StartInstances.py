@@ -6,8 +6,12 @@ Created on 15/04/2014
 
 MAXIMUM_TRIES = 100
 
-from PuppetProvisioning import PuppetConfigFileManager, BotoConnectionManager, AmazonSSHUtils
+from PuppetConfigFileManager import ConfigFileManager
+from BotoConnectionManager import BotoConnectionManager
 import sys, time
+
+def getMemoryOfInstance
+
 
 def waitUntilInstanceIsRunning(instance):
         '''
@@ -100,8 +104,8 @@ def startAmazonInstance(ec2RegionConnection=None, instanceCount=None, spotPrice=
                                                                                          key_name=keyName,
                                                                                          placement = placement,
                                                                                          security_groups=securityGroupsList,
-                                                                                         user_data=userData,
-                                                                                         dry_run=False) 
+                                                                                         user_data=userData
+                                                                                         ) 
         #return instances
         return instanceReservation.instances
     
@@ -111,12 +115,18 @@ if __name__ == '__main__':
     print 'Stratosphere EC2 Deployment'
     
     #To connect to amazon we need to read the region which to connect to, out of the config file
-    configFile = PuppetConfigFileManager.ConfigFileManager()
+    configFile = ConfigFileManager()
     print 'Config file opened'
     
+    amazonConnection = None #Initialize amazon connection
+    
+    if configFile.isOpenStackUrlSet() is False:
     #Connect to amazon region
-    amazonConnection = BotoConnectionManager.BotoConnectionManager(aws_secret_key=configFile.getAWSAccesKey(), aws_key_id=configFile.getAWSKeyID(), region=configFile.getRegion())
-    print "Successfully connected to region "+configFile.getRegion()
+        amazonConnection = BotoConnectionManager(aws_secret_key=configFile.getAWSAccesKey(), aws_key_id=configFile.getAWSKeyID(), region=configFile.getRegion())
+        print "Successfully connected to region "+configFile.getRegion()
+    
+    else: #Connect to OpenStack
+        amazonConnection = BotoConnectionManager(aws_secret_key=configFile.getAWSAccesKey(), aws_key_id=configFile.getAWSKeyID(), openStack=True, openStackAdress=configFile.getOpenStackUrl())
     
     #authorizeSSH access 
     #if AmazonSSHUtils.authorizeSSH(securityGroupName = configFile.getSecurityGroup(), amazonConnection = amazonConnection, ipAddress=configFile.getIPAccess()) is False:
@@ -131,6 +141,17 @@ if __name__ == '__main__':
     #add user name
     userDataMaster = getFileContent(fileWithPath=configFile.getMasterUserDataFile())
     print userDataMaster
+    
+    '''print 'Customize master start script'
+    userDataMaster += 'nohup ./bin/yarn-session.sh -n '
+    userDataMaster += str(configFile.getSlavesInstanceCount() - 1)
+    userDataMaster += ' -jm '
+    userDataMaster +=
+    userDataMaster += ' -tm '
+    userDataMaster += 
+    userDataMaster '>> stratosphere_yarn_session.log 2>&1 &'
+    '''
+
     
     print 'Start one instance of type '+configFile.getMasterInstanceType()+' to run the puppet master instance with image id: '+configFile.getMasterImageId()
     #create variable to access master instance request

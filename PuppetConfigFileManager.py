@@ -36,6 +36,7 @@ class ConfigFileManager(object):
     OVERALL_REGION = 'region'
     OVERALL_IPACCES = 'IP-access'
     OVERALL_CLUSTER_NAME = 'cluster-name'
+    OVERALL_OPENSTACK_URL = 'openstack-url'
     
     #SLAVES SECTION
     SLAVES_IMAGE_ID = 'image-ID'
@@ -97,6 +98,19 @@ class ConfigFileManager(object):
     
     def getClusterName(self):
         return self.config.get(section=self.OVERALL_SECTION_NAME, option=self.OVERALL_CLUSTER_NAME)
+    
+    def getOpenStackUrl(self):
+        return self.config.get(section=self.OVERALL_SECTION_NAME, option=self.OVERALL_OPENSTACK_URL)
+    
+    def isOpenStackUrlSet(self):
+        '''
+        returns True if a spot price is set for the master instance. False otherwise.
+        '''
+        try:
+            self.config.get(self.OVERALL_SECTION_NAME, self.OVERALL_OPENSTACK_URL)
+            return True
+        except:
+            return False
     
     def getMasterUsername(self):
         return self.config.get(section=self.MASTER_SECTION_NAME, option=self.MASTER_USERNAME)
