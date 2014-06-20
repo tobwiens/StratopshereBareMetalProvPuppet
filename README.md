@@ -3,14 +3,22 @@ stratDeployPuppetScriptEc2
 
 Running the script - Installs and configures Stratosphere,HDFS and Yarn 
 -------------------
-1. Create certificates for ssh access
-2. Create two security groups {master group and slaves group} which allow all TCP+UDP traffic to each other and themselves
-3. Write configuration file
-4. run {python StartInstances.py}
+1. Create Key Pairs for accessing your instances.
+2. Enter Key Pair names into conf/instances.cfg at 'key-name'.
+3. Enter your Secret Key and Key ID into /conf/instances.cfg (key-ID,aws-secret-key).
+4. Run {python StartInstances.py}.
+5. Wait for cluster to be running and access the YARN interface via the URL given from the script.
+6. Press any key to terminate your cluster. Or do it manually via the Amazon|OpenStack web interface.
 
 
 Configuration file
 -------------------
-- adjust configuration file towards your needs
-- enter credentials, certificate and security groups
+- When working with Amazon instances only key-name and Amazon credentials (key-ID,aws-secret-key) must be changed in order to run a cluster.
+- Adjust configuration file towards your needs.
+
+Configuration file details
+-------------------
+- ip-access: The IP which is given SSH access. Default is every IP address. Because the instances are protected via the Key Pairs there is no need to change that.
+- spot-price: The script acquires spot instances, which are placed in the same availability zone so that fast and free transfer between nodes is ensured.
+- user-data-file: The script which is given for execution at start-up. 
 
