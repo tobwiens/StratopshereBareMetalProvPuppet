@@ -19,7 +19,7 @@ echo -e "' { \n include java \n include hadoop::cluster::master \n } \n \n " >> 
 
 #start auto update script
 #The parameters have to be updated as soon as possible otherwise
-#the datanodes on the slaves missbehave
+#the data-nodes on the slaves misbehave
 chmod +x /etc/puppet/modules/hadoop/files/certListHostnames.sh 
 nohup /etc/puppet/modules/hadoop/files/certListHostnames.sh &
 
@@ -38,10 +38,13 @@ curl "http://ftp.halifax.rwth-aachen.de/apache/hadoop/common/hadoop-2.3.0/hadoop
 puppet agent --enable
 puppet agent
 
-#wait so that yarn is started, hopefully
-sleep 420
+#wait until the yarn interface is available
+until $(curl --output /dev/null --silent --head --fail http://localhost:9026); do
+    #Yarn Resourcemanager is not started yet
+    sleep 10
+done
 
-wget http://stratosphere-bin.s3-website-us-east-1.amazonaws.com/stratosphere-dist-0.5-SNAPSHOT-yarn.tar.gz
+curl "http://stratosphere-bin.s3-website-us-east-1.amazonaws.com/stratosphere-dist-0.5-SNAPSHOT-yarn.tar.gz" -L --silent --show-error --fail --connect-timeout 60 --max-time 600 --retry 5 -O
 
 homePath=/home/ubuntu
 
