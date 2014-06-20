@@ -82,6 +82,7 @@ def setupSecurityGroups(amazonConnection, configFile):
                        ipProtocol='tcp',
                        fromPort=9026,
                        toPort=9026)
+    
 
 def createSecurityGroup(ec2RegionConnection=None, securityGroupName=None):
     '''
@@ -300,6 +301,19 @@ if __name__ == '__main__':
     userDataMaster = getFileContent(fileWithPath=configFile.getMasterUserDataFile())
     
     print 'Customize master start script'
+    #Wait until all expected nodes are started
+    
+    #Determine running nodes via Yarn rest API
+    determineRunningNodes = ''
+    determineRunningNodes += "\n runningNodes=$(curl --silent http://localhost:9026/ws/v1/cluster/metrics | grep -Po '"
+    determineRunningNodes += '\"totalNodes\"'
+    determineRunningNodes += ":.,' | sed 's/"
+    determineRunningNodes += '\"totalNodes\"'
+    determineRunningNodes += ":/ /' | sed 's/,//') \n"
+    
+    userDataMaster += determineRunningNodes
+    userDataMaster += 'until [ $runningNodes  -ge '+str(configFile.getSlavesInstanceCount())+' ] \n do \n sleep 5 '+determineRunningNodes+'\n done \n'
+    #Start the Stratosphere application
     userDataMaster += '\n nohup ./bin/yarn-session.sh -n '
     userDataMaster += str(int(configFile.getSlavesInstanceCount()) - 1)
     userDataMaster += ' -jm '
@@ -376,6 +390,9 @@ if __name__ == '__main__':
     
     print 'Cluster '+configFile.getClusterName()+' successfully set up. Have fun with your cluster ;)'
     print "Master address: "+puppetMasterInstance.public_dns_name
+    
+    print 'Open the web page '+puppetMasterInstance.public_dns_name+':9026 '
+    print 'When Stratosphere is started it will appear  '
     
     
     raw_input("Press enter to shutdown cluster...")
