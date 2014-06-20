@@ -322,7 +322,7 @@ if __name__ == '__main__':
     userDataMaster += str(configFile.getStratosphereTaskmanagerMemory())
     userDataMaster += ' >> stratosphere_yarn_session.log 2>&1 &'
     
-    print userDataMaster
+    #print userDataMaster #Debug output
 
     
     print 'Start one instance of type '+configFile.getMasterInstanceType()+' to run the puppet master instance with image id: '+configFile.getMasterImageId()
@@ -360,7 +360,7 @@ if __name__ == '__main__':
     
     #replace ::MASTER.IP:: with the real master ip address
     userDataSlave = userDataSlave.replace("::MASTER.IP::", puppetMasterInstance.private_ip_address)
-    print userDataSlave
+    #print userDataSlave #Degub output
     
     #Start puppet slaves
     puppetSlavesInstanceList = None
@@ -388,11 +388,9 @@ if __name__ == '__main__':
                                                instanceType=configFile.getSlavesInstanceType(),
                                                userData=userDataSlave)
     
-    print 'Cluster '+configFile.getClusterName()+' successfully set up. Have fun with your cluster ;)'
-    print "Master address: "+puppetMasterInstance.public_dns_name
     
+    print 'Cluster will be started in around 5 minutes, then'
     print 'Open the web page '+puppetMasterInstance.public_dns_name+':9026 '
-    print 'When Stratosphere is started it will appear  '
     
     
     raw_input("Press enter to shutdown cluster...")
